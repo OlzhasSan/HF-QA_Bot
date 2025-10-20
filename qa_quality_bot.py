@@ -1,19 +1,31 @@
 import os
 import asyncio
+import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
-# === НАСТРОЙКИ ===
-BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")  # теперь Render подставит токен автоматически
-YOUR_CHAT_ID = 473798501
-GROUP_CHAT_ID = -1003133537449  # В каналах и группах всегда есть минус перед ID!
+# === ЛОГИРОВАНИЕ ===
+LOG_FILE = "bot.log"
+logging.basicConfig(
+    level=logging.INFO,  # INFO — нормальный уровень, можно поменять на DEBUG
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        logging.StreamHandler(),  # дублируем вывод в консоль (видно на Render)
+    ]
+)
+logger = logging.getLogger(__name__)
 
-# Проверяем токен
+# === НАСТРОЙКИ ===
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+YOUR_CHAT_ID = 473798501
+GROUP_CHAT_ID = -1003133537449
+
 if not BOT_TOKEN:
-    print("❗ TELEGRAM_TOKEN не задан в переменных окружения. Завершаем работу.")
+    logger.error("❗ TELEGRAM_TOKEN не задан в переменных окружения. Завершаем работу.")
     raise SystemExit(1)
 
 # === FSM Состояния ===
@@ -36,17 +48,21 @@ dp = Dispatcher(storage=MemoryStorage())
 
 @dp.message(Command("start"))
 async def start(message: types.Message):
+    logger.info(f"/start от {message.from_user.full_name} (ID {message.from_user.id})")
     await message.answer("👋 Привет! Я QA Quality Bot.\nНапиши /report чтобы создать новый QA-отчёт.")
 
 @dp.message(Command("report"))
 async def report_start(message: types.Message, state: FSMContext):
+    logger.info(f"/report от {message.from_user.full_name} (ID {message.from_user.id})")
     if message.chat.id != YOUR_CHAT_ID:
         await message.answer("⚠️ Этот режим доступен только в личном чате с ботом.")
+        logger.warning(f"Попытка доступа к /report от чужого ID: {message.chat.id}")
         return
 
     await message.answer("📅 Укажи диапазон дат отчёта (например: 14–18 октября):")
     await state.set_state(ReportStates.date_range)
 
+# === Остальные шаги FSM ===
 @dp.message(ReportStates.date_range)
 async def get_date_range(message: types.Message, state: FSMContext):
     await state.update_data(date_range=message.text)
@@ -135,7 +151,7 @@ async def get_positive(message: types.Message, state: FSMContext):
     await bot.send_message(GROUP_CHAT_ID, report)
     await message.answer("🚀 Отчёт успешно сформирован и отправлен в общий чат отдела!")
     await state.clear()
-
+    logger.info(f"✅ Отчёт отправлен в группу {GROUP_CHAT_ID} от {message.from_user.full_name}")
 
 # === Render Fix ===
 if os.environ.get("RENDER"):
@@ -145,19 +161,21 @@ if os.environ.get("RENDER"):
     def _start_simple_server():
         port = int(os.environ.get("PORT", 10000))
         server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
-        print(f"✅ Fake HTTP server started on port {port} (for Render health check)")
+        logger.info(f"✅ Fake HTTP server started on port {port} (for Render health check)")
         try:
             server.serve_forever()
         except Exception as e:
-            print("Fake server stopped:", e)
+            logger.error(f"Fake server stopped: {e}")
 
     threading.Thread(target=_start_simple_server, daemon=True).start()
 
-
 # === Запуск бота ===
 async def main():
-    print("🤖 Бот запущен и готов к работе...")
-    await dp.start_polling(bot)
+    logger.info("🤖 Бот запущен и готов к работе...")
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.exception(f"❌ Ошибка во время работы бота: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
