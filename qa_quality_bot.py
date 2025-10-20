@@ -7,9 +7,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 # === НАСТРОЙКИ ===
-BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")  # теперь Render будет подставлять токен сюда автоматически
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")  # теперь Render подставит токен автоматически
 YOUR_CHAT_ID = 473798501
 GROUP_CHAT_ID = -1003133537449  # В каналах и группах всегда есть минус перед ID!
+
+# Проверяем токен
+if not BOT_TOKEN:
+    print("❗ TELEGRAM_TOKEN не задан в переменных окружения. Завершаем работу.")
+    raise SystemExit(1)
 
 # === FSM Состояния ===
 class ReportStates(StatesGroup):
@@ -131,6 +136,25 @@ async def get_positive(message: types.Message, state: FSMContext):
     await message.answer("🚀 Отчёт успешно сформирован и отправлен в общий чат отдела!")
     await state.clear()
 
+
+# === Render Fix ===
+if os.environ.get("RENDER"):
+    import threading
+    from http.server import SimpleHTTPRequestHandler, HTTPServer
+
+    def _start_simple_server():
+        port = int(os.environ.get("PORT", 10000))
+        server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+        print(f"✅ Fake HTTP server started on port {port} (for Render health check)")
+        try:
+            server.serve_forever()
+        except Exception as e:
+            print("Fake server stopped:", e)
+
+    threading.Thread(target=_start_simple_server, daemon=True).start()
+
+
+# === Запуск бота ===
 async def main():
     print("🤖 Бот запущен и готов к работе...")
     await dp.start_polling(bot)
