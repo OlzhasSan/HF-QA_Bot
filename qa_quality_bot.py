@@ -1,11 +1,13 @@
 import os
 import asyncio
 import logging
+import threading
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from flask import Flask
 
 # === ЛОГИРОВАНИЕ ===
 LOG_FILE = "bot.log"
@@ -156,24 +158,20 @@ async def get_positive(message: types.Message, state: FSMContext):
     await state.clear()
     logger.info(f"✅ Отчёт отправлен в группу {GROUP_CHAT_ID} от {message.from_user.full_name}")
 
-# === Render Fix ===
-if os.environ.get("RENDER"):
-    import threading
-    from http.server import SimpleHTTPRequestHandler, HTTPServer
+# === Flask сервер для Render ===
+app = Flask(__name__)
 
-    def _start_simple_server():
-        port = int(os.environ.get("PORT", 10000))
-        server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
-        logger.info(f"✅ Fake HTTP server started on port {port} (for Render health check)")
-        try:
-            server.serve_forever()
-        except Exception as e:
-            logger.error(f"Fake server stopped: {e}")
+@app.route("/")
+def home():
+    return "✅ Bot is alive!", 200
 
-    threading.Thread(target=_start_simple_server, daemon=True).start()
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    logger.info(f"🌐 Flask server running on port {port}")
+    app.run(host="0.0.0.0", port=port)
 
 # === Запуск бота ===
-async def main():
+async def run_bot():
     logger.info("🤖 Бот запущен и готов к работе...")
     try:
         await dp.start_polling(bot)
@@ -181,4 +179,7 @@ async def main():
         logger.exception(f"❌ Ошибка во время работы бота: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Flask в отдельном потоке
+    threading.Thread(target=run_flask, daemon=True).start()
+    # Бот в asyncio
+    asyncio.run(run_bot())
