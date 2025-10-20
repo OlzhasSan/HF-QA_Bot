@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 import threading
+import time
 import requests
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 YOUR_CHAT_ID = 473798501
 GROUP_CHAT_ID = -1003133537449
-RENDER_URL = os.getenv("RENDER_URL")  # Добавь в Render env переменную, например https://hfqa-bot.onrender.com
+RENDER_URL = os.getenv("RENDER_URL")
 
 if not BOT_TOKEN:
     logger.error("❗ TELEGRAM_TOKEN не задан в переменных окружения. Завершаем работу.")
@@ -172,7 +173,7 @@ def run_flask():
     logger.info(f"🌐 Flask server running on port {port}")
     app.run(host="0.0.0.0", port=port)
 
-# === Keep-Alive Ping для Render ===
+# === Keep-alive пингер ===
 def keep_alive():
     if not RENDER_URL:
         logger.warning("⚠️ Переменная RENDER_URL не установлена, keep-alive отключён.")
@@ -181,14 +182,11 @@ def keep_alive():
     def ping():
         while True:
             try:
-                r = requests.get(RENDER_URL)
-                logger.info(f"🟢 Keep-alive ping: {r.status_code}")
+                requests.get(RENDER_URL, timeout=10)
+                logger.info(f"🔄 Keep-alive ping: {RENDER_URL}")
             except Exception as e:
-                logger.error(f"🔴 Ошибка ping: {e}")
-            finally:
-                # Пинг каждые 5 минут
-                import time
-                time.sleep(300)
+                logger.warning(f"❗ Ошибка keep-alive пинга: {e}")
+            time.sleep(600)  # каждые 10 минут
 
     threading.Thread(target=ping, daemon=True).start()
 
@@ -201,11 +199,8 @@ async def run_bot():
         logger.exception(f"❌ Ошибка во время работы бота: {e}")
 
 if __name__ == "__main__":
-    # Flask в отдельном потоке
+    # Flask и keep-alive в отдельных потоках
     threading.Thread(target=run_flask, daemon=True).start()
-
-    # Keep-alive поток
     keep_alive()
-
     # Бот в asyncio
     asyncio.run(run_bot())
