@@ -10,11 +10,11 @@ from aiogram.fsm.state import State, StatesGroup
 # === ЛОГИРОВАНИЕ ===
 LOG_FILE = "bot.log"
 logging.basicConfig(
-    level=logging.INFO,  # INFO — нормальный уровень, можно поменять на DEBUG
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler(LOG_FILE, encoding="utf-8"),
-        logging.StreamHandler(),  # дублируем вывод в консоль (видно на Render)
+        logging.StreamHandler(),
     ]
 )
 logger = logging.getLogger(__name__)
@@ -132,8 +132,11 @@ async def get_positive(message: types.Message, state: FSMContext):
 
 📊 Статистика
 🪲 Всего багов: {data['total']}
-🚨 High: {data['high']} | 🧩 Medium: {data['medium']} | 🪶 Low: {data['low']}
-🔁 Повторные: {data['reopened']} | 🧨 Прод: {data['prod']}
+🚨 High: {data['high']}
+🧩 Medium: {data['medium']}
+🪶 Low: {data['low']}
+🔁 Повторные: {data['reopened']}
+🧨 Прод: {data['prod']}
 
 ⚠️ Зоны риска
 {data['risk_zones']}
