@@ -1,3 +1,4 @@
+import os
 import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -6,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 
 # === НАСТРОЙКИ ===
-BOT_TOKEN = "8164364559:AAHWKH5TyJMDLR2wVSY_5ZgvIP9tNeHnEw0"
+BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")  # теперь Render будет подставлять токен сюда автоматически
 YOUR_CHAT_ID = 473798501
 GROUP_CHAT_ID = -1003133537449  # В каналах и группах всегда есть минус перед ID!
 
