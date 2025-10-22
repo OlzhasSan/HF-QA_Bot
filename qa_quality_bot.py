@@ -123,6 +123,8 @@ async def get_root_causes(message: types.Message, state: FSMContext):
 
 @dp.message(ReportStates.qa_suggestions)
 async def get_suggestions(message: types.Message, state: FSMContext):
+    await state.update_data(qa_suggestions=message.text)
+
     data = await state.get_data()
 
     report = f"""
@@ -144,9 +146,7 @@ async def get_suggestions(message: types.Message, state: FSMContext):
 
 🧰 Предложения QA
 {data['qa_suggestions']}
-
 """
-
     await bot.send_message(GROUP_CHAT_ID, report)
     await message.answer("🚀 Отчёт успешно сформирован и отправлен!")
     await state.clear()
