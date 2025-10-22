@@ -45,7 +45,6 @@ class ReportStates(StatesGroup):
     risk_zones = State()
     root_causes = State()
     qa_suggestions = State()
-    positive_points = State()
 
 # === Инициализация ===
 bot = Bot(token=BOT_TOKEN)
@@ -54,7 +53,7 @@ dp = Dispatcher(storage=MemoryStorage())
 @dp.message(Command("start"))
 async def start(message: types.Message):
     logger.info(f"/start от {message.from_user.full_name} (ID {message.from_user.id})")
-    await message.answer("👋 Привет! Я QA Quality Bot.\nНапиши /report чтобы создать новый QA-отчёт.")
+    await message.answer("👋 Привет! Я QA Bot.\nНапиши /report чтобы создать новый QA-отчёт.")
 
 @dp.message(Command("report"))
 async def report_start(message: types.Message, state: FSMContext):
@@ -107,7 +106,7 @@ async def get_reopened(message: types.Message, state: FSMContext):
 @dp.message(ReportStates.prod)
 async def get_prod(message: types.Message, state: FSMContext):
     await state.update_data(prod=message.text)
-    await message.answer("⚠️ Опиши зоны риска:")
+    await message.answer("⚠️ В каких модулях баги?:")
     await state.set_state(ReportStates.risk_zones)
 
 @dp.message(ReportStates.risk_zones)
@@ -124,12 +123,6 @@ async def get_root_causes(message: types.Message, state: FSMContext):
 
 @dp.message(ReportStates.qa_suggestions)
 async def get_suggestions(message: types.Message, state: FSMContext):
-    await state.update_data(qa_suggestions=message.text)
-    await message.answer("✅ Позитив недели:")
-    await state.set_state(ReportStates.positive_points)
-
-@dp.message(ReportStates.positive_points)
-async def get_positive(message: types.Message, state: FSMContext):
     data = await state.get_data()
 
     report = f"""
@@ -152,12 +145,10 @@ async def get_positive(message: types.Message, state: FSMContext):
 🧰 Предложения QA
 {data['qa_suggestions']}
 
-✅ Позитив недели
-{message.text}
 """
 
     await bot.send_message(GROUP_CHAT_ID, report)
-    await message.answer("🚀 Отчёт успешно сформирован и отправлен в общий чат отдела!")
+    await message.answer("🚀 Отчёт успешно сформирован и отправлен!")
     await state.clear()
     logger.info(f"✅ Отчёт отправлен в группу {GROUP_CHAT_ID} от {message.from_user.full_name}")
 
